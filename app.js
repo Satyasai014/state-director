@@ -22,6 +22,14 @@ const initializeDatabase = async (request, response) => {
 };
 initializeDatabase();
 
+const state = (s) => {
+  return {
+    stateId: s.state_id,
+    stateName: s.state_name,
+    population: s.population,
+  };
+};
+
 app.get("/states/", async (request, response) => {
   const sqlQueryForStates = `
     SELECT
@@ -29,7 +37,7 @@ app.get("/states/", async (request, response) => {
     FROM
     state;`;
   const query = await db.all(sqlQueryForStates);
-  response.send(query);
+  response.send(query.map((e) => state(e)));
 });
 
 app.get("/states/:stateId/", async (request, response) => {
@@ -41,8 +49,8 @@ app.get("/states/:stateId/", async (request, response) => {
     state
     WHERE
     state_id = ${stateId};`;
-  const state = await db.get(sqlQueryForSpecificState);
-  response.send(state);
+  const states = await db.get(sqlQueryForSpecificState);
+  response.send(state(states));
 });
 
 app.post("/districts/", async (request, response) => {
@@ -63,6 +71,18 @@ app.post("/districts/", async (request, response) => {
   response.send("District Successfully Added");
 });
 
+const distri = (i) => {
+  return {
+    districtId: i.district_id,
+    districtName: i.district_name,
+    stateId: i.state_id,
+    cases: i.cases,
+    cured: i.cured,
+    active: i.active,
+    deaths: i.deaths,
+  };
+};
+
 app.get("/districts/:districtId/", async (request, response) => {
   const { districtId } = request.params;
   const getOneDistrictQuery = `
@@ -73,7 +93,7 @@ app.get("/districts/:districtId/", async (request, response) => {
     WHERE
     district_id = ${districtId};`;
   const database = await db.get(getOneDistrictQuery);
-  response.send(database);
+  response.send(distri(database));
 });
 
 app.delete("/districts/:districtId/", async (request, response) => {
@@ -108,10 +128,10 @@ app.get("/states/:stateId/stats/", async (request, response) => {
   console.log(stateId);
   const query = `
   SELECT
-    cases AS totalCases,
-    cured AS totalCured,
-    active AS totalActive,
-    deaths AS totalDeaths
+   SUM(cases) AS totalCases,
+    SUM(cured) AS totalCured,
+    SUM(active) AS totalActive,
+    SUM(deaths) AS totalDeaths
   FROM
   district
   WHERE 
@@ -119,6 +139,11 @@ app.get("/states/:stateId/stats/", async (request, response) => {
   const details = await db.get(query);
   response.send(details);
 });
+const s = (dd) => {
+  return {
+    stateName: dd.state_name,
+  };
+};
 
 app.get("/districts/:districtId/details/", async (request, response) => {
   const { districtId } = request.params;
@@ -132,8 +157,8 @@ app.get("/districts/:districtId/details/", async (request, response) => {
   ON state.state_id=district.state_id
   WHERE
   district_id = ${districtId};`;
-  const k = await db.all(query);
-  response.send(k);
+  const k = await db.get(query);
+  response.send(s(k));
 });
 
 module.exports = app;
